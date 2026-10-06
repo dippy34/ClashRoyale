@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>First Footsteps Mars Base</title>
+<style>
+  :root { --sky-top: #e9b48a; --sky-bottom: #f6dcc0; --ink: #2b1a12; --panel: rgba(255, 245, 235, 0.85); }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--sky-bottom); font-family: system-ui, sans-serif; color: var(--ink); }
+  canvas { display: block; }
+  #hud { position: absolute; left: 16px; top: 16px; max-width: min(340px, calc(100vw - 32px)); background: var(--panel);
+         border-radius: 12px; padding: 12px 14px; font-size: 14px; line-height: 1.4; }
+  #hud h1 { margin: 0 0 4px; font-size: 17px; }
+  #hud.hidden { display: none; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="hud"><h1>First Footsteps: Mars Base 1</h1>Drag to spin, scroll to zoom. These are the same STL files you import into Tinkercad.</div>
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { STLLoader } from "three/addons/loaders/STLLoader.js";
+import { toCreasedNormals } from "three/addons/utils/BufferGeometryUtils.js";
+
+const PARTS = [
+  ["01_terrain", 0xc2552a], ["02_rocks", 0x73381f], ["03_white", 0xf2f2ee], ["04_metal", 0x9ea6ad],
+  ["05_glass", 0xb4e0ff], ["06_plants", 0x3ea84a], ["07_soil", 0x4d301f], ["08_navy", 0x1a2c66],
+  ["09_red", 0xd92929], ["10_gold", 0xf5b80d], ["11_dark", 0x22252a],
+];
+const params = new URLSearchParams(location.search);
+if (params.has("nohud")) document.getElementById("hud").classList.add("hidden");
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const sky = document.createElement("canvas");
+sky.width = 2; sky.height = 256;
+const g = sky.getContext("2d");
+const grad = g.createLinearGradient(0, 0, 0, 256);
+grad.addColorStop(0, "#c98a62"); grad.addColorStop(0.6, "#efc9a4"); grad.addColorStop(1, "#f7e2cb");
+g.fillStyle = grad; g.fillRect(0, 0, 2, 256);
+scene.background = new THREE.CanvasTexture(sky);
+scene.fog = new THREE.Fog(0xefc9a4, 420, 900);
+
+const camera = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, 1, 3000);
+camera.up.set(0, 0, 1);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+scene.add(new THREE.HemisphereLight(0xfff1e0, 0x8a4a2a, 1.3));
+const sun = new THREE.DirectionalLight(0xfff4e6, 2.4);
+sun.position.set(-70, -150, 210);
+sun.castShadow = true;
+sun.shadow.mapSize.set(4096, 4096);
+Object.assign(sun.shadow.camera, { left: -130, right: 130, top: 130, bottom: -130, near: 10, far: 600 });
+sun.shadow.bias = -0.0004;
+scene.add(sun);
+
+// ground skirt so the base doesn't float in the sky
+const skirt = new THREE.Mesh(new THREE.CircleGeometry(900, 64), new THREE.MeshStandardMaterial({ color: 0xb8653a, roughness: 1 }));
+skirt.position.z = -0.05;
+skirt.receiveShadow = true;
+scene.add(skirt);
+
+const loader = new STLLoader();
+const loads = PARTS.map(([name, color]) => loader.loadAsync(`../tinkercad/parts/${name}.stl`).then((geo) => {
+  const glass = name.includes("glass");
+  const geom = toCreasedNormals(geo, Math.PI / 5);
+  const mat = glass
+    ? new THREE.MeshPhysicalMaterial({ color, transparent: true, opacity: 0.22, roughness: 0.05, metalness: 0,
+        clearcoat: 1, depthWrite: false, side: THREE.DoubleSide })
+    : new THREE.MeshStandardMaterial({ color, roughness: name.includes("metal") ? 0.45 : 0.85,
+        metalness: name.includes("metal") ? 0.35 : 0 });
+  const mesh = new THREE.Mesh(geom, mat);
+  mesh.castShadow = !glass;
+  mesh.receiveShadow = true;
+  if (glass) mesh.renderOrder = 2;
+  scene.add(mesh);
+}));
+
+const VIEWS = {
+  hero: [[95, -215, 150], [0, 2, 8]],
+  greenhouse: [[-10, -95, 58], [-44, -2, 10]],
+  lander: [[120, -40, 55], [42, 28, 18]],
+  rover: [[70, -120, 45], [20, -48, 6]],
+  top: [[0, -1, 330], [0, 0, 0]],
+};
+function setView(name) {
+  const [pos, target] = VIEWS[name] || VIEWS.hero;
+  camera.position.set(...pos);
+  controls.target.set(...target);
+  controls.update();
+}
+setView(params.get("view") || "hero");
+window.setView = setView;
+
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+Promise.all(loads).then(() => { window.READY = true; });
+renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
+</script>
+</body>
+</html>
