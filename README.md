@@ -28,7 +28,12 @@ Size: **180 × 180 × 59 mm**, which fits on Tinkercad's default 200 × 200 work
 
 ## Put it in Tinkercad
 
-Download the files from the [`tinkercad/`](tinkercad) folder. There are two ways to do this.
+Download the files from the [`tinkercad/`](tinkercad) folder. There are three ways to do this.
+
+### Let Claude do all the clicking
+Tinkercad only runs inside your own logged-in browser, so this has to happen on your computer. Open the **Claude desktop app**, turn on **computer use** (or **Claude in Chrome**), and paste this:
+
+> Open tinkercad.com in my browser (I'm already logged in) and create a new 3D design called "Mars Base 1". Download https://github.com/dippy34/ClashRoyale/raw/ccr-6934be4b-kmfr2g/tinkercad/mars_colony_parts.zip and unzip it. Import all 11 STL files into that design one at a time, in mm at 100% scale. Then colour each shape using the table in https://github.com/dippy34/ClashRoyale/blob/ccr-6934be4b-kmfr2g/README.md, and tick Transparent for 05_glass. If the parts don't line up, select all and use Align (bottom on the up/down axis, middle on the other two). Don't group them. Save, then send me a screenshot.
 
 ### Option A: one file, done in 1 minute
 1. Go to [tinkercad.com](https://www.tinkercad.com), then **Create → 3D Design**.
